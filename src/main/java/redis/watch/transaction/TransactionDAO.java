@@ -25,6 +25,7 @@ public class TransactionDAO {
 
 		while (result == null && attempts > 0) {
 
+			System.out.println("Attempt number: " + attempts + " of 10");
 			attempts--;
 
 			// execute a transaction
@@ -59,6 +60,7 @@ public class TransactionDAO {
 			});
 		}
 
+		System.out.println("Finished!");
 		return sku;
 	}
 }
