@@ -13,54 +13,57 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class TransactionDAO {
 
-	@Autowired
-	@Qualifier("stringRedisTemplate")
-	private StringRedisTemplate stringTemplate;
+    @Autowired
+    @Qualifier("stringRedisTemplate")
+    private StringRedisTemplate stringTemplate;
 
-	public String updateSKU(String sku, String qty, boolean sleep) {
+    public String updateSKU(String sku, String qty, boolean sleep) {
 
-		List<Object> result = null;
+        List<Object> result = null;
 
-		int attempts = 10;
+        int attempts = 10;
 
-		while (result == null && attempts > 0) {
+        while (result == null && attempts > 0) {
 
-			System.out.println("Attempt number: " + attempts + " of 10");
-			attempts--;
+            attempts--;
 
-			// execute a transaction
-			result = stringTemplate.execute(new SessionCallback<List<Object>>() {
-				@Override
-				public List<Object> execute(RedisOperations operations) throws DataAccessException {
+            // execute a transaction
+            result = stringTemplate.execute(new SessionCallback<List<Object>>() {
+                @Override
+                public List<Object> execute(RedisOperations operations) throws DataAccessException {
 
-					// Key to WATCH
-					operations.watch("sku:" + sku);
+                    // Key to WATCH
+                    operations.watch("sku:" + sku);
 
-					// Start Transaction
-					operations.multi();
+                    // Start Transaction
+                    operations.multi();
 
-					if (sleep) {
-						// Sleep to test WATCH
-						try {
-							System.out.println("And now my watch begin!");
-							Thread.sleep(30000);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-						System.out.println("And now his watch is over!");
-					}
+                    sleep(sleep);
 
-					// Add SKU hash to Redis
-					stringTemplate.opsForHash().put("sku:" + sku, "qty", qty);
+                    // Add SKU hash to Redis
+                    stringTemplate.opsForHash().put("sku:" + sku, "qty", qty);
 
-					// This will contain the results of all ops in the
-					// transaction
-					return operations.exec();
-				}
-			});
-		}
+                    // This will contain the results of all ops in the
+                    // transaction
+                    return operations.exec();
+                }
 
-		System.out.println("Finished!");
-		return sku;
-	}
+            });
+        }
+
+        return sku;
+    }
+
+    private void sleep(boolean sleep) {
+        if (sleep) {
+            // Sleep to test WATCH
+            try {
+                System.out.println("And now my watch begins!");
+                Thread.sleep(30000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("And now his watch is over!");
+        }
+    }
 }
