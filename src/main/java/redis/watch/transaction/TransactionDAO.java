@@ -27,8 +27,6 @@ public class TransactionDAO {
 
 			attempts--;
 
-			final String newValue = some(sku, qty);
-
 			// execute a transaction
 			result = stringTemplate.execute(new SessionCallback<List<Object>>() {
 				@Override
@@ -39,6 +37,8 @@ public class TransactionDAO {
 
 					// Start Transaction
 					operations.multi();
+
+					final String newValue = sum(sku, qty);
 
 					sleep(sleep);
 
@@ -62,7 +62,7 @@ public class TransactionDAO {
 		return sku;
 	}
 
-	private String some(String sku, String qty) {
+	private String sum(String sku, String qty) {
 
 		String current = getCurrent(sku);
 
