@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -16,28 +15,15 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RedisDAO {
 
-	@Autowired
-	@Qualifier("redisTemplate")
-	private RedisTemplate<String, Model> template;
+	// @Autowired
+	// @Qualifier("redisTemplate")
+	// private RedisTemplate<String, Model> template;
 
 	@Autowired
 	@Qualifier("stringRedisTemplate")
 	private StringRedisTemplate stringTemplate;
 
-	// @Autowired
-	// RedisOperations<String, String> redisOperations;
-
-	public void insert() {
-
-		Map<String, String> map = new HashMap<>();
-		map.put("name", "name");
-		map.put("price", "10");
-
-		stringTemplate.opsForHash().putAll("key", map);
-	}
-
-	public void updateSKU(Long sku, Integer qty) {
-		
+	public void updateSKU(String sku, Integer qty) {
 
 		System.out.println("And now my watch begin!");
 
@@ -46,12 +32,11 @@ public class RedisDAO {
 			public List<Object> execute(RedisOperations operations) throws DataAccessException {
 				operations.watch("key");
 				operations.multi();
-				
-				
+
 				Map<String, String> map = new HashMap<>();
 				map.put("name", "name2");
 				map.put("price", "2");
-				
+
 				try {
 					Thread.sleep(30000);
 				} catch (InterruptedException e) {
@@ -60,12 +45,12 @@ public class RedisDAO {
 				}
 
 				stringTemplate.opsForHash().putAll("key", map);
-				
+
 				// This will contain the results of all ops in the transaction
 				return operations.exec();
 			}
 		});
-		
+
 		System.out.println("And now his watch is over!");
 
 	}
