@@ -13,57 +13,90 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class TransactionDAO {
 
-    @Autowired
-    @Qualifier("stringRedisTemplate")
-    private StringRedisTemplate stringTemplate;
+	@Autowired
+	@Qualifier("stringRedisTemplate")
+	private StringRedisTemplate stringTemplate;
 
-    public String updateSKU(String sku, String qty, boolean sleep) {
+	public String updateSKU(String sku, String qty, boolean sleep) {
 
-        List<Object> result = null;
+		List<Object> result = null;
 
-        int attempts = 10;
+		int attempts = 10;
 
-        while (result == null && attempts > 0) {
+		while (result == null && attempts > 0) {
 
-            attempts--;
+			attempts--;
 
-            // execute a transaction
-            result = stringTemplate.execute(new SessionCallback<List<Object>>() {
-                @Override
-                public List<Object> execute(RedisOperations operations) throws DataAccessException {
+			final String newValue = some(sku, qty);
 
-                    // Key to WATCH
-                    operations.watch("sku:" + sku);
+			// execute a transaction
+			result = stringTemplate.execute(new SessionCallback<List<Object>>() {
+				@Override
+				public List<Object> execute(RedisOperations operations) throws DataAccessException {
 
-                    // Start Transaction
-                    operations.multi();
+					// Key to WATCH
+					operations.watch(getKey(sku));
 
-                    sleep(sleep);
+					// Start Transaction
+					operations.multi();
 
-                    // Add SKU hash to Redis
-                    stringTemplate.opsForHash().put("sku:" + sku, "qty", qty);
+					sleep(sleep);
 
-                    // This will contain the results of all ops in the
-                    // transaction
-                    return operations.exec();
-                }
+					// Add SKU hash to Redis
+					stringTemplate.opsForHash().put(getKey(sku), "qty", newValue);
 
-            });
-        }
+					// This will contain the results of all ops in the
+					// transaction
+					return operations.exec();
+				}
 
-        return sku;
-    }
+			});
 
-    private void sleep(boolean sleep) {
-        if (sleep) {
-            // Sleep to test WATCH
-            try {
-                System.out.println("And now my watch begins!");
-                Thread.sleep(30000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println("And now his watch is over!");
-        }
-    }
+			if (result == null) {
+				System.out.println("Concurrency occurred!");
+			}
+
+		}
+
+		System.out.println("Finished!");
+		return sku;
+	}
+
+	private String some(String sku, String qty) {
+
+		String current = getCurrent(sku);
+
+		if (current != null) {
+			Integer currentQty = Integer.valueOf(current);
+
+			Integer incomingQty = Integer.valueOf(qty);
+
+			Integer finalValue = Integer.sum(currentQty, incomingQty);
+
+			return finalValue.toString();
+		} else {
+			return qty;
+		}
+	}
+
+	private String getKey(String sku) {
+		return "sku:" + sku;
+	}
+
+	private String getCurrent(String sku) {
+		return (String) stringTemplate.opsForHash().get(getKey(sku), "qty");
+	}
+
+	private void sleep(boolean sleep) {
+		if (sleep) {
+			// Sleep to test WATCH
+			try {
+				System.out.println("And now my watch begins!");
+				Thread.sleep(30000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			System.out.println("And now his watch is over!");
+		}
+	}
 }
