@@ -6,7 +6,10 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -35,11 +38,20 @@ public class RedisDAO {
 	
 	public void watch(){
 		
-		stringTemplate.watch("hash");
+		SessionCallback<String> callback = new SessionCallback<String>() {
+		    @Override
+		    public <K, V> String execute(RedisOperations<K, V> operations)
+		            throws DataAccessException {
+		    	
+		        operations.watch("hash");
+		        // Read
+		        operations.multi();
+		        // Write operations
+		        operations.exec();
+		    }
+		};
 		
-		stringTemplate.multi();
-		
-		stringTemplate.exec();
+		stringTemplate.execute(callback);
 	}
 	
 	public void update() {
