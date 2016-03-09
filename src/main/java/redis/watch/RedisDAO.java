@@ -1,7 +1,7 @@
 package redis.watch;
 
-
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,13 +19,13 @@ public class RedisDAO {
 	@Autowired
 	@Qualifier("redisTemplate")
 	private RedisTemplate<String, Model> template;
-	
+
 	@Autowired
 	@Qualifier("stringRedisTemplate")
 	private StringRedisTemplate stringTemplate;
-	
-//	@Autowired
-//	RedisOperations<String, String> redisOperations;
+
+	// @Autowired
+	// RedisOperations<String, String> redisOperations;
 
 	public void insert() {
 
@@ -33,42 +33,40 @@ public class RedisDAO {
 		map.put("name", "name");
 		map.put("price", "10");
 
-		stringTemplate.opsForHash().putAll("hash", map);
+		stringTemplate.opsForHash().putAll("key", map);
 	}
-	
-	public void watch(){
-		
-		SessionCallback<String> callback = new SessionCallback<String>() {
-		    @Override
-		    public <K, V> String execute(RedisOperations<K, V> operations)
-		            throws DataAccessException {
-		    	
-		        operations.watch("hash");
-		        // Read
-		        operations.multi();
-		        // Write operations
-		        operations.exec();
-		    }
-		};
-		
-		stringTemplate.execute(callback);
-	}
-	
-	public void update() {
 
-		Map<String, String> map = new HashMap<>();
-		map.put("name", "name");
-		map.put("price", "10");
+	public void updateSKU(Long sku, Integer qty) {
 		
-//		Integer i = Integer.valueOf(1);
+
+		System.out.println("And now my watch begin!");
+
+		// execute a transaction
+		stringTemplate.execute(new SessionCallback<List<Object>>() {
+			public List<Object> execute(RedisOperations operations) throws DataAccessException {
+				operations.watch("key");
+				operations.multi();
+				
+				
+				Map<String, String> map = new HashMap<>();
+				map.put("name", "name2");
+				map.put("price", "2");
+				
+				try {
+					Thread.sleep(30000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				stringTemplate.opsForHash().putAll("key", map);
+				
+				// This will contain the results of all ops in the transaction
+				return operations.exec();
+			}
+		});
 		
-//		while(true){
-//			i++;
-//			stringTemplate.opsForHash().put("hash", "price", i.toString());
-//		}
-		
-		for (Integer i = 0; i < 10; i++) {
-			stringTemplate.opsForHash().put("hash", "price", i.toString());
-		}
+		System.out.println("And now his watch is over!");
+
 	}
 }
